@@ -45,6 +45,9 @@ namespace Xasu.Auth.Protocols
         public delegate void OnAuthorizationInfoUpdate(OAuth2Token info);
         private OnAuthorizationInfoUpdate onAuthorizationInfoUpdate;
 
+        public delegate void OnDeviceAuthorizationInfo(OAuth2DeviceAuthorization info);
+        public static event OnDeviceAuthorizationInfo DeviceAuthorizationReceived;
+
         public async Task Init(IDictionary<string, string> config)
         {
             XasuTracker.Instance.Log("[OAuth2Device] Starting");
@@ -89,6 +92,15 @@ namespace Xasu.Auth.Protocols
             var deviceAuth = await DoDeviceAuthorizationRequest(deviceAuthorizationEndpoint, clientId, scope);
 
             XasuTracker.Instance.Log("[OAuth2Device] User code: " + deviceAuth.UserCode);
+
+            try
+            {
+                DeviceAuthorizationReceived?.Invoke(deviceAuth);
+            }
+            catch (Exception ex)
+            {
+                XasuTracker.Instance.LogError("[OAuth2Device] Device info listener failed: " + ex.Message);
+            }
 
             // Step 2: Open verification URL in browser for user to approve
             var verificationUrl = !string.IsNullOrEmpty(deviceAuth.VerificationUriComplete)
