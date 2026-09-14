@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 
 namespace Xasu.Auth.Protocols.OAuth2
 {
-    internal class OAuth2DeviceAuthorization
+    public class OAuth2DeviceAuthorization
     {
         public OAuth2DeviceAuthorization() { }
 
