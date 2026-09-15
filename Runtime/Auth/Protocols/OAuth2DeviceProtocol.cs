@@ -26,6 +26,7 @@ namespace Xasu.Auth.Protocols
         private const string homePageField = "homepage";
         private const string pollIntervalField = "poll_interval";
         private const string maxPollAttemptsField = "max_poll_attempts";
+        private const string autoOpenDeviceUrlField = "auto_open_device_url";
 
         private string deviceAuthorizationEndpoint;
         private string tokenEndpoint;
@@ -119,7 +120,9 @@ namespace Xasu.Auth.Protocols
                 };
             }
 
-            AuthUtility.OpenUrl(verificationUrl);
+            if (config.ContainsKey(autoOpenDeviceUrlField) && bool.TryParse(config.Value(autoOpenDeviceUrlField), out bool autoOpenDeviceUrl) && autoOpenDeviceUrl) {
+                AuthUtility.OpenUrl(verificationUrl);
+            }
 
             XasuTracker.Instance.Log("[OAuth2Device] Opened verification URL: " + verificationUrl);
 
