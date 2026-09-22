@@ -192,5 +192,19 @@ namespace Xasu.Auth.Utils
                 Application.OpenURL(url);
             }
         }
+
+
+        public static string GetBaseDomainUrl(string url)
+        {
+            var uri = new Uri(url);
+
+            string[] hostParts = uri.Host.Split('.');
+
+            string rootHost = hostParts.Length >= 2
+                ? $"{hostParts[^2]}.{hostParts[^1]}"
+                : uri.Host;
+
+            return $"{uri.Scheme}://{rootHost}/";
+        }
     }
 }

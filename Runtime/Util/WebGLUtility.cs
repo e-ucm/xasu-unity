@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 #endif
 using UnityEngine;
 using Xasu.Config;
+using Xasu.Auth.Utils;
+using System.Xml.Schema;
 
 namespace Xasu.Util
 {
@@ -108,7 +110,24 @@ namespace Xasu.Util
             // If no password we assume the username is the password
             ssoPassword = string.IsNullOrEmpty(ssoPassword) ? ssoUsername : ssoPassword;
 
-            if (!string.IsNullOrEmpty(ssoTokenEndpoint))
+            if (!string.IsNullOrEmpty(authToken))
+            {
+                XasuTracker.Instance.Log("Authorization Bearer configuration detected in URL parameters. Setting up Bearer authentication.");
+                trackerConfig.AuthProtocol = "bearer";
+
+                if (string.IsNullOrEmpty(actorHomePage))
+                {
+                    actorHomePage = AuthUtility.GetBaseDomainUrl(resultUri);
+                    XasuTracker.Instance.LogWarning($"[WEBGL UTIL] Homepage parameter (\"actor_homepage\") is missing for bearer auth! Using fallback value {actorHomePage}.");
+                }
+
+                trackerConfig.AuthParameters = new Dictionary<string, string>
+                {
+                    {"auth_token", authToken}
+                };
+                
+            }
+            else if (!string.IsNullOrEmpty(ssoTokenEndpoint))
             {
                 XasuTracker.Instance.Log("SSO configuration detected in URL parameters. Setting up OAuth2 authentication.\n" + ssoTokenEndpoint);
                 trackerConfig.AuthProtocol = "oauth2";
@@ -131,6 +150,13 @@ namespace Xasu.Util
                 XasuTracker.Instance.Log(username + " detected in URL parameters. Setting up basic authentication with provided username and password.");
                 trackerConfig.Online = true;
                 trackerConfig.AuthProtocol = "basic";
+
+                if(string.IsNullOrEmpty(actorHomePage))
+                {
+                    actorHomePage = AuthUtility.GetBaseDomainUrl(resultUri);
+                    XasuTracker.Instance.LogWarning($"[WEBGL UTIL] Homepage parameter (\"actor_homepage\") is missing for basic auth! Using fallback value {actorHomePage}.");
+                }
+
                 trackerConfig.AuthParameters = new Dictionary<string, string>
                     {
                         {"username", ssoUsername},
@@ -174,6 +200,10 @@ namespace Xasu.Util
                 XasuTracker.Instance.Log("Tracker configuration from URL is invalid: No result_uri or backup_uri provided.");
                 return null;
             }
+
+            XasuTracker.Instance.Log($"[WEBGL UTIL] Auth Protocol: '{trackerConfig.AuthProtocol}'");
+            foreach (var authParameter in trackerConfig.AuthParameters)
+                XasuTracker.Instance.Log($"[WEBGL UTIL] Auth Parameter '{authParameter.Key}':'{authParameter.Value}'");
 
             return trackerConfig;
 

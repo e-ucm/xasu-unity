@@ -14,11 +14,12 @@ namespace Xasu.Auth
     /// </summary>
     public static class AuthFactory
     {
-        private const string notSupportedAuthMessage = "Authorization type \"{0}\" not supported. Accepted types: basic, oauth and oauth2.";
+        private const string notSupportedAuthMessage = "Authorization type \"{0}\" not supported. Accepted types: basic, bearer, oauth, oauth2, device and cmi5.";
 
         private static Dictionary<string, IAuthProtocol> authProtocols = new Dictionary<string, IAuthProtocol>()
         {
             { "basic", new BasicProtocol() },
+            { "bearer", new BearerProtocol() },
             { "oauth", new OAuthProtocol() },
             { "oauth2", new OAuth2Protocol() },
             { "cmi5", new Cmi5Protocol() }
