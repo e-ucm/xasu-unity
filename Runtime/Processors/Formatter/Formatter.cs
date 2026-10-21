@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using TinCan;
 using Xasu.Config;
@@ -14,7 +15,7 @@ namespace Xasu.Processors.Formatter
                 case TraceFormats.XAPI:
                     var jObject = statement.ToJObject(version);
                     StripEmptyResult(jObject);
-                    return jObject.ToString();
+                    return jObject.ToString(Formatting.None);
                 default:
                 case TraceFormats.CSV:
                     throw new NotSupportedException("CSV is not available in this version!");

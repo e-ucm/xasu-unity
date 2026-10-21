@@ -315,10 +315,7 @@ namespace Xasu.Processors
         // TODO: catch exceptions
         private bool LoadFallbackTracesToLists(int n)
         {
-            if (!hasFallbackTraces)
-            {
-                return false;
-            }
+            if (!hasFallbackTraces) return false;
 
             lastTraceTasks.Clear();
             lastStatements.Clear();
@@ -326,10 +323,20 @@ namespace Xasu.Processors
             using (StreamReader reader = File.OpenText(file))
             {
                 string line = String.Empty;
+                int lineNumber = 0;
                 while (lastStatements.Count < n && (line = reader.ReadLine()) != null)
                 {
-                    var statement = new Statement(new TinCan.Json.StringOfJSON(line));
-                    lastStatements.Add(statement);
+                    lineNumber++;
+                    try
+                    {
+                        var statement = new Statement(new TinCan.Json.StringOfJSON(line));
+                        lastStatements.Add(statement);
+                    }
+                    catch (Exception ex)
+                    {
+                        string preview = line.Length > 200 ? line.Substring(0, 200) + "..." : line;
+                        XasuTracker.Instance.LogWarning($"[TRACKER] Skipping corrupted fallback trace at line {lineNumber}: {ex.Message} | Content: {preview}");
+                    }
                 }
             }
 
@@ -341,37 +348,45 @@ namespace Xasu.Processors
         private void PopFallbackTraces()
         {
             bool tracesPending = false;
-            using (var newFallbackStream = File.OpenWrite(fallbackTmpFile))
-            using (var oldFallbackStream = File.OpenRead(file))
-            using (var newFallback = new StreamWriter(newFallbackStream))
-            using (var oldFallback = new StreamReader(oldFallbackStream))
+            try
             {
-                // Skip the sent traces
-                for (int i = 0; i < lastStatements.Count; i++)
+                using (var newFallbackStream = File.OpenWrite(fallbackTmpFile))
+                using (var oldFallbackStream = File.OpenRead(file))
+                using (var newFallback = new StreamWriter(newFallbackStream))
+                using (var oldFallback = new StreamReader(oldFallbackStream))
                 {
-                    TracesFromFallbackSent++;
-                    XasuTracker.Instance.Log(string.Format("[TRACKER ({0}): {1}] Done submitting fallback statement. {2} ", Thread.CurrentThread.ManagedThreadId, this.GetType(), lastStatements[i].id));
-                    oldFallback.ReadLine();
+                    // Skip the sent traces
+                    for (int i = 0; i < lastStatements.Count; i++)
+                    {
+                        TracesFromFallbackSent++;
+                        XasuTracker.Instance.Log(string.Format("[TRACKER ({0}): {1}] Done submitting fallback statement. {2} ", Thread.CurrentThread.ManagedThreadId, this.GetType(), lastStatements[i].id));
+                        oldFallback.ReadLine();
+                    }
+
+                    // Move the rest of the traces to a new file
+                    string line;
+                    while ((line = oldFallback.ReadLine()) != null)
+                    {
+                        newFallback.WriteLine(line);
+                        tracesPending = true;
+                    }
+
+                    newFallback.Flush();
                 }
 
-                // Move the rest of the traces to a new file
-                string line;
-                while ((line = oldFallback.ReadLine()) != null)
-                {
-                    newFallback.WriteLine(line);
-                    tracesPending = true;
-                }
+                // Replace the old fallback with the new file
+                File.Replace(fallbackTmpFile, file, file + ".bac");
 
-                newFallback.Flush();
+                if (!tracesPending)
+                {
+                    hasFallbackTraces = false;
+                    State = ProcessorState.Working;
+                }
             }
-
-            // Replace the old fallback with the new file
-            File.Replace(fallbackTmpFile, file, file+".bac");
-
-            if (!tracesPending)
+            catch (Exception ex)
             {
-                hasFallbackTraces = false;
-                State = ProcessorState.Working;
+                XasuTracker.Instance.LogError($"[TRACKER] Failed to pop fallback traces: {ex.Message}");
+                // Keep hasFallbackTraces=true so we retry next cycle
             }
         }
 
